@@ -47,6 +47,9 @@ try:
     def main_menu(pageurl):
         page = _play_parser.get_page(pageurl)
         if page.player: add_player(page.player)
+        for filter_list in page.filter_lists:
+            add_title(filter_list)
+            add_item_list(filter_list.item_list)
         for video_list in page.video_lists:
             if video_list.title: add_title(video_list)
             add_item_list(video_list.item_list)

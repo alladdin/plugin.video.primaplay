@@ -101,5 +101,13 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(page.video_lists[0].item_list[0].link,
             'http://play.iprima.cz/prostreno-ix-10')
 
+        self.assertEqual(len(page.filter_lists), 3)
+        self.assertEqual(page.filter_lists[0].title, u'Řada')
+
+        self.assertEqual(len(page.filter_lists[0].item_list), 11)
+        self.assertEqual(page.filter_lists[0].item_list[0].title, u'Sezóna 1')
+        self.assertEqual(page.filter_lists[0].item_list[0].link,
+            'http://play.iprima.cz/prostreno?season=p14883&sort[]=Rord&sort[]=latest')
+
 if __name__ == '__main__':
     unittest.main()

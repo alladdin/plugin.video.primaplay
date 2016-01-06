@@ -71,7 +71,8 @@ class Parser:
         content = self.ua.get(link)
         return Page(
             self.get_page_player(content),
-            self.get_video_lists(content, link)
+            self.get_video_lists(content, link),
+            self.get_filter_lists(content, link)
         )
 
     def get_page_player(self, content):
@@ -144,6 +145,34 @@ class Parser:
             list.append(Item(title.decode('utf-8'), link, image_url))
         return list
 
+    def get_filter_lists(self, content, src_link):
+        list = []
+        before_wrapper_re = re.compile('(.*)<div class="loading-wrapper">', re.S)
+        before_content = before_wrapper_re.search(content).group(1)
+
+        filter_wrappers = re.split('<li class="hamburger-parent[^"]*">', before_content)
+
+        title_re = re.compile('<span data-jnp="[^"]+" class="hamburger-toggler">([^<]+)</span>')
+        for filter_wrapper in filter_wrappers:
+            title_result = title_re.search(filter_wrapper)
+            if title_result is None: continue
+            title = title_result.group(1)
+            items = self.get_filter_items(filter_wrapper, src_link)
+            if (len(items) <= 0): continue 
+            list.append(PageVideoList(title.decode('utf-8'), None, None, items))
+        return list
+
+    def get_filter_items(self, content, src_link):
+        list = []
+
+        filter_item_re = re.compile('<li>[^<]*<a class="tdi" href="([^"]+)"[^>]*>([^<]+)</a>[^<]*</li>', re.S)
+        for raw_link, raw_title in filter_item_re.findall(content):
+            link = self.make_full_link(raw_link, src_link)
+            title = self.strip_tags(raw_title)
+            list.append(Item(title.decode('utf-8'), link))
+
+        return list
+
     def make_full_link(self, target_link, src_link):
         if target_link is None:
             return None
@@ -169,8 +198,9 @@ class Parser:
         return result.strip()
     
 class Page:
-    def __init__(self, player = None, video_lists = []):
+    def __init__(self, player = None, video_lists = [], filter_lists = []):
         self.video_lists = video_lists
+        self.filter_lists = filter_lists
         self.player = player
 
 class PageVideoList:
