@@ -55,7 +55,6 @@ class PrimaPlayUnitTest(unittest.TestCase):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_video_page.html', 'test_player_init.js']), mockTime())
         page = prima_play.get_page('http://play.iprima.cz/prostreno-IX-9')
 
-        self.assertEqual(page.title, u'Prostřeno!: Prostřeno!')
         self.assertEqual(page.player.title, u'Prostřeno!')
         self.assertEqual(page.player.video_link,
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
@@ -75,7 +74,6 @@ class PrimaPlayUnitTest(unittest.TestCase):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_homepage.html']), mockTime())
         page = prima_play.get_page('http://play.iprima.cz')
 
-        self.assertEqual(page.title, u'Seriály a pořady TV Prima | Prima PLAY')
         self.assertEqual(page.player, None)
         self.assertEqual(len(page.video_lists), 7)
         self.assertEqual(page.video_lists[0].title, u'Oblíbené seriály')
@@ -91,7 +89,6 @@ class PrimaPlayUnitTest(unittest.TestCase):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_prostreno_epizody.html']), mockTime())
         page = prima_play.get_page('http://play.iprima.cz')
 
-        self.assertEqual(page.title, u'Prostřeno!')
         self.assertEqual(page.player, None)
         self.assertEqual(len(page.video_lists), 1)
         self.assertEqual(page.video_lists[0].title, None)

@@ -6,10 +6,9 @@ import urllib
 import time
 import re
 import sys
-from bs4 import BeautifulSoup
 
 __author__ = "Ladislav Dokulil"
-__license__ = "MIT"
+__license__ = "GPL 2"
 __version__ = "1.0.0"
 __email__ = "alladdin@zemres.cz"
 
@@ -60,84 +59,95 @@ class Parser:
     def get_next_list_items(self, content):
         cdata_re = re.compile('<!\[CDATA\[(.*)\]\]>', re.S)
         cdata_match = cdata_re.search(content)
-        soup = BeautifulSoup(cdata_match.group(1), 'html.parser')
-        return self.get_items_from_wrapper(soup, '')
+        return self.get_items_from_wrapper(cdata_match.group(1), '')
 
     def get_next_list_link(self, content):
-        search = re.compile('(https?://play.iprima.cz/tdi/dalsi.*offset=\d+)')
-        result = search.search(content)
+        next_link_re = re.compile('(https?://play.iprima.cz/tdi/dalsi.*offset=\d+)')
+        result = next_link_re.search(content)
         if result: return result.group(1)
         return None
 
     def get_page(self, link):
         content = self.ua.get(link)
-        soup = BeautifulSoup(content, 'html.parser')
         return Page(
-            self.get_page_title(soup),
-            self.get_page_player(soup),
-            self.get_video_lists(soup, link)
+            self.get_page_player(content),
+            self.get_video_lists(content, link)
         )
 
-    def get_page_title(self, soup):
-        h1_title = soup.find('h1')
-        if h1_title:
-            return " ".join(h1_title.stripped_strings)
-        return " ".join(soup.title.stripped_strings)
-
-    def get_page_player(self, soup):
-        fake_player = soup.find(id='fake-player');
-        if fake_player is None:
+    def get_page_player(self, content):
+        fake_player_re = re.compile('<div id="fake-player" class="[^"]+" data-product="([^"]+)">[^<]*<img src="([^"]+)" alt="([^"]+)"', re.S)
+        fake_player_result = fake_player_re.search(content)
+        if fake_player_result is None:
             return None
-        product_id = fake_player['data-product']
-        image_url = fake_player.img['src']
-        title = fake_player.img['alt'].strip()
+        product_id = fake_player_result.group(1)
+        image_url = fake_player_result.group(2)
+        title = fake_player_result.group(3).strip().decode('utf-8')
         video_link = self.get_video_link(product_id)
         return Player(title, video_link, image_url)
 
-    def get_video_lists(self, soup, src_link):
+    def get_video_lists(self, content, src_link):
         list = []
-        for next_wrapper in soup.select('#js-tdi-items-next'):
-            items = self.get_items_from_wrapper(next_wrapper, src_link)
-            next_link_soup = soup.select('div.infinity-scroll')
+        tdi_items_re = re.compile('<div class="[^"]+" id="js-tdi-items-next"')
+
+        if tdi_items_re.search(content):
+            items = self.get_items_from_wrapper(content, src_link)
+            if (len(items) <= 0): return list
+
+            next_link_re = re.compile('<div class="infinity-scroll" data-href="([^"]+)"')
+            next_link_result = next_link_re.search(content)
             next_link = None
-            if len(next_link_soup) > 0:
-                next_link_tag = next_link_soup[0]
-                next_link = next_link_tag['data-href']
-            if (len(items) <= 0): continue
+            if next_link_result: next_link = next_link_result.group(1)
+
             list.append(PageVideoList(None,
                 None, self.make_full_link(next_link, src_link),
                 items))
+            
+            return list
 
-        for wrapper in soup.select('section.movies-list-carousel-wrapper'):
-            title = self.strip_join_strings(wrapper.h2.stripped_strings)
-            link_tag = wrapper.h2.a
+        wrapper_items = re.split('<section class="l-constrained movies-list-carousel-wrapper">', content)
+
+        title_re = re.compile('<h2 class="[^"]+" data-scroll="cid-[^"]+">(.+)</h2>[^<]*<div class="l-movies-list', re.S)
+        link_re = re.compile('<h2[^>]*>[^<]*<a href="([^"]+)">', re.S)
+        for wrapper_item in wrapper_items:
+            title_result = title_re.search(wrapper_item)
+            if title_result is None: continue
+            title = self.strip_tags(title_result.group(1))
+            link_result = link_re.search(wrapper_item)
             link = None
-            if link_tag: link = link_tag['href']
-            items = self.get_items_from_wrapper(wrapper, src_link)
+            if link_result: link = self.make_full_link(link_result.group(1), src_link)
+            items = self.get_items_from_wrapper(wrapper_item, src_link)
             if (len(items) <= 0): continue
-            list.append(PageVideoList(title,
+            list.append(PageVideoList(title.decode('utf-8'),
                 self.make_full_link(link, src_link),
                 None, items))
+
         return list
 
-    def get_items_from_wrapper(self, wrapper, src_link):
+    def get_items_from_wrapper(self, content, src_link):
         list = []
-        for item_soup in wrapper.select('div.movie-border'):
-            link = self.make_full_link(item_soup.div.a['href'], src_link)
-            title_list = item_soup.select('div.back div.header')
-            if len(title_list) <= 0: continue
-            title = self.strip_join_strings(title_list[0].stripped_strings)
+
+        html_items = re.split('<div id="[^"]+" class="movie-border"[^>]+>', content)
+
+        item_link_re = re.compile('<a href="([^"]+)">')
+        item_img_re = re.compile('<img data-srcset="(\S+)')
+        item_title_re = re.compile('<div class="back">[^<]*<a[^>]*>[^<]*<div class="header">(.+)</div>[^<]*<div class="content">', re.S)
+
+        for html_item in html_items:
+            link_result = item_link_re.search(html_item)
+            img_result = item_img_re.search(html_item)
+            title_result = item_title_re.search(html_item)
+            if title_result is None: continue
+            title = self.strip_tags(title_result.group(1))
+            link = self.make_full_link(link_result.group(1), src_link)
             image_url = None
-            image_tag = item_soup.select('img.lazyload')
-            if len(image_tag) > 0:
-                image_re = re.compile('^([^ ]+)')
-                image_url = image_re.search(image_tag[0]['data-srcset']).group(1)
-            list.append(Item(title, link, image_url))
+            if img_result: image_url = img_result.group(1)
+            list.append(Item(title.decode('utf-8'), link, image_url))
         return list
 
     def make_full_link(self, target_link, src_link):
         if target_link is None:
             return None
+        target_link = target_link.replace('&amp;','&')
         full_link_re = re.compile('^https?://')
         if full_link_re.match(target_link):
             return target_link
@@ -150,19 +160,16 @@ class Parser:
         link = link_re.match(src_link).group(1)
         return link + target_link
 
-    def strip_join_strings(self, strings):
-        result = (" ".join(strings)).strip()
-
-        result = result.replace("\n",'')
-        result = result.replace("\t",'')
-        result = result.replace("\r",'')
-
-        return result
-        
+    def strip_tags(self, string):
+        result = re.sub('<[^>]+>', '', string)
+        result = result.replace("\n",' ')
+        result = result.replace("\t",' ')
+        result = result.replace("\r",' ')
+        result = re.sub('\s+', ' ', result)
+        return result.strip()
     
 class Page:
-    def __init__(self, title, player = None, video_lists = []):
-        self.title = title
+    def __init__(self, player = None, video_lists = []):
         self.video_lists = video_lists
         self.player = player
 
