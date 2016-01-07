@@ -44,6 +44,12 @@ try:
     _baseurl_ = sys.argv[0]
     _play_parser = PrimaPlay.Parser()
 
+
+    def first_menu():
+        li = list_item('Hledej')
+        url = get_menu_link( pagesearch = '1' )
+        xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+
     def main_menu(pageurl):
         page = _play_parser.get_page(pageurl)
         if page.player: add_player(page.player)
@@ -63,6 +69,18 @@ try:
         if next_list.next_link: add_next_link(next_list.next_link)
 
         xbmcplugin.endOfDirectory(_handle_, updateListing=True)
+
+    def search():
+        keyboard = xbmc.Keyboard('','Hledej')
+        keyboard.doModal()
+        if (not keyboard.isConfirmed()):
+            xbmcplugin.endOfDirectory(_handle_)
+            return
+        search_query = keyboard.getText()
+        if len(search_query) <= 1:
+            xbmcplugin.endOfDirectory(_handle_)
+            return
+        main_menu(_play_parser.get_search_url(search_query))
 
     def add_title(video_list):
         li = list_item('[B]'+video_list.title+'[/B]')
@@ -115,18 +133,25 @@ try:
                 pass
 
 
-    pageurl = "http://play.iprima.cz"
+    pageurl = None
     nexturl = None
+    pagesearch = None
     params = get_params()
     assign_params(params)
     logDbg("PrimaPlay Parameters!!!")
     logDbg("PAGE: "+str(pageurl))
     logDbg("NEXT PAGE: "+str(nexturl))
+    logDbg("PAGE SEARCH: "+str(pagesearch))
     try:
         if nexturl:
             next_menu(nexturl)
-        else:
+        elif pagesearch:
+            search()
+        elif pageurl:
             main_menu(pageurl)
+        else:
+            first_menu()
+            main_menu("http://play.iprima.cz")
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         _exception_log(exc_type, exc_value, exc_traceback)

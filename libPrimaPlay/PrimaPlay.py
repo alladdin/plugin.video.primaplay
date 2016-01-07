@@ -35,6 +35,7 @@ class Parser:
     def __init__(self, ua = UserAgent(), time_obj = time):
         self.ua = ua
         self.player_init_url = 'http://play.iprima.cz/prehravac/init?'
+        self.search_url = 'http://play.iprima.cz/vysledky-hledani-vse?'
         self.time = time_obj
 
     def get_player_init_url(self, productID):
@@ -44,6 +45,11 @@ class Parser:
             'productId': productID
         })
         #http://play.iprima.cz/prehravac/init?_infuse=1&_ts=1450864235286&productId=p135603
+
+    def get_search_url(self, query):
+        return self.search_url + urllib.urlencode({
+            'query': query
+        })
 
     def get_video_link(self, productID):
         content = self.ua.get(self.get_player_init_url(productID))
@@ -147,8 +153,10 @@ class Parser:
 
     def get_filter_lists(self, content, src_link):
         list = []
-        before_wrapper_re = re.compile('(.*)<div class="loading-wrapper">', re.S)
-        before_content = before_wrapper_re.search(content).group(1)
+        before_wrapper_re = re.compile('^(.*)<div class="loading-wrapper">', re.S)
+        before_wrapper_result = before_wrapper_re.search(content)
+        if before_wrapper_result is None: return list
+        before_content = before_wrapper_result.group(1)
 
         filter_wrappers = re.split('<li class="hamburger-parent[^"]*">', before_content)
 

@@ -109,5 +109,20 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(page.filter_lists[0].item_list[0].link,
             'http://play.iprima.cz/prostreno?season=p14883&sort[]=Rord&sort[]=latest')
 
+    def test_get_page__search(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_search_page.html']), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz')
+
+        self.assertEqual(page.player, None)
+        self.assertEqual(len(page.video_lists), 3)
+        self.assertEqual(page.video_lists[0].title, u'Mezi seriály')
+        self.assertEqual(page.video_lists[0].link,
+            'http://play.iprima.cz/vysledky-hledani?query=prostreno&searchGroup=SERIES')
+        self.assertEqual(len(page.video_lists[0].item_list), 2)
+        self.assertEqual(page.video_lists[0].item_list[0].title,
+            u'VIP PROSTŘENO! 3 Řady , 32 Epizod')
+        self.assertEqual(page.video_lists[0].item_list[0].link,
+            'http://play.iprima.cz/vip-prostreno')
+
 if __name__ == '__main__':
     unittest.main()
