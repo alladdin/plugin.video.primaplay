@@ -78,8 +78,16 @@ class Parser:
         return Page(
             self.get_page_player(content),
             self.get_video_lists(content, link),
-            self.get_filter_lists(content, link)
+            self.get_filter_lists(content, link),
+            self.get_current_filters(content, link)
         )
+
+    def get_redirect_from_remove_link(self, link):
+        content = self.ua.get(link)
+        redirect_re = re.compile('<redirect href="([^"]+)"')
+        redirect_result = redirect_re.search(content)
+        if redirect_result is None: return None
+        return self.make_full_link(redirect_result.group(1), link)
 
     def get_page_player(self, content):
         fake_player_re = re.compile('<div id="fake-player" class="[^"]+" data-product="([^"]+)">[^<]*<img src="([^"]+)" alt="([^"]+)"', re.S)
@@ -181,6 +189,27 @@ class Parser:
 
         return list
 
+    def get_current_filters(self, content, src_link):
+        filter_wrapper_re = re.compile('<div class="current-filter">(.*)<div class="loading-wrapper">', re.S)
+        filter_wrapper_result = filter_wrapper_re.search(content)
+        if filter_wrapper_result is None: return None
+        filter_content = filter_wrapper_result.group(1)
+
+        reset_filter_re = re.compile('<li>[^<]*<a class="tdi" data-jnp="i.ResetFilter" href="([^"]+)">([^<]+)</a></li>')
+        reset_filter_result = reset_filter_re.search(filter_content)
+        if reset_filter_result is None: return None
+        
+        reset_filter_link = self.make_full_link(reset_filter_result.group(1), src_link)
+
+        current_filters = []
+        filter_item_re = re.compile('<li>[^<]*<a href="([^"]+)"[^>]*>([^<]+)<span[^>]+></span></a>[^<]*</li>', re.S)
+        for raw_link, raw_title in filter_item_re.findall(filter_content):
+            link = self.make_full_link(raw_link, src_link)
+            title = self.strip_tags(raw_title)
+            current_filters.append(Item(title.decode('utf-8'), link))
+
+        return PageVideoList(None, reset_filter_link, None, current_filters)
+
     def make_full_link(self, target_link, src_link):
         if target_link is None:
             return None
@@ -206,8 +235,9 @@ class Parser:
         return result.strip()
     
 class Page:
-    def __init__(self, player = None, video_lists = [], filter_lists = []):
+    def __init__(self, player = None, video_lists = [], filter_lists = [], current_filters = None):
         self.video_lists = video_lists
+        self.current_filters  = current_filters
         self.filter_lists = filter_lists
         self.player = player
 

@@ -45,63 +45,85 @@ try:
     _play_parser = PrimaPlay.Parser()
 
 
-    def first_menu():
-        li = list_item('Hledej')
-        url = get_menu_link( pagesearch = '1' )
-        xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
-
     def main_menu(pageurl):
         page = _play_parser.get_page(pageurl)
-        if page.player: add_player(page.player)
-        for filter_list in page.filter_lists:
-            add_title(filter_list)
-            add_item_list(filter_list.item_list)
+        if page.player:
+            add_player(page.player)
+        else:
+            add_search_menu()
+        add_filters(page, pageurl)
         for video_list in page.video_lists:
             if video_list.title: add_title(video_list)
             add_item_list(video_list.item_list)
             if video_list.next_link: add_next_link(video_list.next_link)
-
-        xbmcplugin.endOfDirectory(_handle_)
 
     def next_menu(nexturl):
         next_list = _play_parser.get_next_list(nexturl)
         add_item_list(next_list.list)
         if next_list.next_link: add_next_link(next_list.next_link)
 
-        xbmcplugin.endOfDirectory(_handle_, updateListing=True)
-
     def search():
-        keyboard = xbmc.Keyboard('','Hledej')
+        keyboard = xbmc.Keyboard('',u'Hledej')
         keyboard.doModal()
-        if (not keyboard.isConfirmed()):
-            xbmcplugin.endOfDirectory(_handle_)
-            return
+        if (not keyboard.isConfirmed()): return
         search_query = keyboard.getText()
-        if len(search_query) <= 1:
-            xbmcplugin.endOfDirectory(_handle_)
-            return
+        if len(search_query) <= 1: return
         main_menu(_play_parser.get_search_url(search_query))
+
+    def remove_filter(removefilterurl):
+        link = _play_parser.get_redirect_from_remove_link(removefilterurl)
+        main_menu(link)
+
+    def manage_filter(pageurl, filterid):
+        if filterid is None:
+            main_menu(pageurl)
+            return
+
+        page = _play_parser.get_page(pageurl)
+        dlg = xbmcgui.Dialog()
+        filter_list = page.filter_lists[filterid]
+        add_id = dlg.select(filter_list.title, map(lambda x: x.title, filter_list.item_list))
+        if add_id < 0:
+            main_menu(pageurl)
+            return
+
+        main_menu(filter_list.item_list[add_id].link)
+
+    def add_filters(page, pageurl):
+        if page.current_filters:
+            li = list_item(u'[B]Odstranit nastavené filtry: [/B]' + ", ".join(map(lambda x: x.title, page.current_filters.item_list)))
+            url = get_menu_link( action = 'FILTER-REMOVE', linkurl = page.current_filters.link )
+            xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+        for filterid, filter_list in enumerate(page.filter_lists):
+            li = list_item(u'[B]Nastav filtr: [/B]' + filter_list.title)
+            url = get_menu_link( action = 'FILTER-MANAGE', linkurl = pageurl, filterid = filterid )
+            xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+
+    def add_search_menu():
+        li = list_item(u'[B]Hledej[/B]')
+        url = get_menu_link( action = 'SEARCH' )
+        xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
     def add_title(video_list):
         li = list_item('[B]'+video_list.title+'[/B]')
         url = '#'
         if video_list.link:
-            url = get_menu_link( pageurl = video_list.link )
+            url = get_menu_link( action = 'PAGE', linkurl = video_list.link )
         xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
     def add_item_list(item_list):
         for item in item_list:
             li = list_item(item.title, item.image_url)
-            url = get_menu_link( pageurl = item.link )
+            url = get_menu_link( action = 'PAGE', linkurl = item.link )
             xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
     
     def add_next_link(next_link):
         li = list_item(u'Další stránka')
-        url = get_menu_link( nexturl = next_link )
+        url = get_menu_link( action = 'PAGE-NEXT', linkurl = next_link )
         xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
     def add_player(player):
-        li = list_item(player.title, player.image_url)
+        li = list_item(u"[B]Přehraj:[/B] "+player.title, player.image_url)
         xbmcplugin.addDirectoryItem(handle=_handle_, url=player.video_link, listitem=li, isFolder=False)
 
     def list_item(label, thumbnail = None):
@@ -132,26 +154,35 @@ try:
             except:
                 pass
 
+    action = None
+    linkurl = None
+    filterid = None
 
-    pageurl = None
-    nexturl = None
-    pagesearch = None
     params = get_params()
     assign_params(params)
     logDbg("PrimaPlay Parameters!!!")
-    logDbg("PAGE: "+str(pageurl))
-    logDbg("NEXT PAGE: "+str(nexturl))
-    logDbg("PAGE SEARCH: "+str(pagesearch))
+    logDbg("action: "+str(action))
+    logDbg("linkurl: "+str(linkurl))
+    logDbg("filterid: "+str(filterid))
     try:
-        if nexturl:
-            next_menu(nexturl)
-        elif pagesearch:
+        if action == "FILTER-REMOVE":
+            remove_filter(linkurl)
+            xbmcplugin.endOfDirectory(_handle_, updateListing=True)
+        if action == "FILTER-MANAGE":
+            manage_filter(linkurl, int(filterid))
+            xbmcplugin.endOfDirectory(_handle_, updateListing=True)
+        elif action == "PAGE-NEXT":
+            next_menu(linkurl)
+            xbmcplugin.endOfDirectory(_handle_, updateListing=True)
+        elif action == "SEARCH":
             search()
-        elif pageurl:
-            main_menu(pageurl)
+            xbmcplugin.endOfDirectory(_handle_)
+        elif action == "PAGE":
+            main_menu(linkurl)
+            xbmcplugin.endOfDirectory(_handle_)
         else:
-            first_menu()
             main_menu("http://play.iprima.cz")
+            xbmcplugin.endOfDirectory(_handle_)
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         _exception_log(exc_type, exc_value, exc_traceback)

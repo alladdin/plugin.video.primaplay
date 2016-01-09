@@ -124,5 +124,22 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(page.video_lists[0].item_list[0].link,
             'http://play.iprima.cz/vip-prostreno')
 
+    def test_get_page__current_filters(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_filters.html']), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz')
+
+        self.assertEqual(page.current_filters.link,
+            'https://play.iprima.cz/tdi/filtr/zrusit/prostreno?availability=new&season=p14894')
+        self.assertEqual(len(page.current_filters.item_list), 2)
+        self.assertEqual(page.current_filters.item_list[0].title, u'Novinky')
+        self.assertEqual(page.current_filters.item_list[0].link,
+            'http://play.iprima.cz/prostreno?season=p14894&action=remove')
+
+    def test_get_redirect_from_remove_link(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_remove_all_filters.html']), mockTime())
+        self.assertEqual(prima_play.get_redirect_from_remove_link("http://remove_link"),
+            'http://play.iprima.cz/prostreno')
+        
+
 if __name__ == '__main__':
     unittest.main()
