@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import os, sys
 import PrimaPlay
+
+os.chdir(os.path.dirname(sys.argv[0]))
 
 class mockTime:
     def time(self):
@@ -84,6 +87,12 @@ class PrimaPlayUnitTest(unittest.TestCase):
             u'Vinaři 2 Řady , 32 Epizod')
         self.assertEqual(page.video_lists[0].item_list[0].link,
             'http://play.iprima.cz/vinari')
+        self.assertEqual(len(page.filter_lists), 3)
+        self.assertEqual(page.filter_lists[0].title, u'Žánr')
+        self.assertEqual(len(page.filter_lists[0].item_list), 31)
+        self.assertEqual(page.filter_lists[0].item_list[0].title, u'Katastrofický')
+        self.assertEqual(page.filter_lists[0].item_list[0].link,
+            'http://play.iprima.cz?genres[]=p14197')
 
     def test_get_page__episodes(self):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_prostreno_epizody.html']), mockTime())

@@ -179,14 +179,32 @@ class Parser:
         return list
 
     def get_filter_items(self, content, src_link):
-        list = []
+        link_list_re = re.compile('<div class="sub-menu" id="js-tdi-items-filter[^"]*">[^<]*<ul>', re.S)
+        if link_list_re.search(content):
+            return self.get_filter_items_link(content, src_link)
+        checkbox_list_re = re.compile('<div class="sub-menu" id="js-tdi-items-filter[^"]*">[^<]*<ul class="checkbox-columns[^"]*">', re.S)
+        if checkbox_list_re.search(content):
+            return self.get_filter_items_checkbox(content, src_link)
+        return []
 
+    def get_filter_items_link(self, content, src_link):
+        list = []
         filter_item_re = re.compile('<li>[^<]*<a class="tdi" href="([^"]+)"[^>]*>([^<]+)</a>[^<]*</li>', re.S)
         for raw_link, raw_title in filter_item_re.findall(content):
             link = self.make_full_link(raw_link, src_link)
             title = self.strip_tags(raw_title)
             list.append(Item(title.decode('utf-8'), link))
+        return list
 
+    def get_filter_items_checkbox(self, content, src_link):
+        list = []
+        prefix_char = '?'
+        if src_link.find('?') >= 0: prefix_char = '&'
+        filter_item_re = re.compile('<li>[^<]*<div class="checkbox">[^<]*<input type="checkbox" id="[^"]*" name="([^"]+)" value="([^"]+)">[^<]*<label[^>]*>([^<]+)</label>[^<]*</div>[^<]*</li>', re.S)
+        for name, value, raw_title in filter_item_re.findall(content):
+            link = src_link + prefix_char + name + "=" + value
+            title = self.strip_tags(raw_title)
+            list.append(Item(title.decode('utf-8'), link))
         return list
 
     def get_current_filters(self, content, src_link):

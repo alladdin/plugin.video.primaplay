@@ -1,3 +1,7 @@
+2016-10-01 [0.2.1]
+ * Filters reworked - better interface for filters
+ * added filter for genre
+
 2016-07-01 [0.2.0]
  * Beta product stage
 
