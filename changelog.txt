@@ -1,3 +1,6 @@
+2016-12-01 [0.2.2]
+ * add source link to addon.xml
+
 2016-10-01 [0.2.1]
  * Filters reworked - better interface for filters
  * added filter for genre
