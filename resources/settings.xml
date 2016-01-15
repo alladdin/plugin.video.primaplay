@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <setting id="hd_enabled" type="bool" label="Povolit kvalitu přehrávání v HD" default="true" />
+</settings>

@@ -32,11 +32,12 @@ class UserAgent:
         return url
 
 class Parser:
-    def __init__(self, ua = UserAgent(), time_obj = time):
+    def __init__(self, ua = UserAgent(), time_obj = time, hd_enabled = True):
         self.ua = ua
         self.player_init_url = 'http://play.iprima.cz/prehravac/init?'
         self.search_url = 'http://play.iprima.cz/vysledky-hledani-vse?'
         self.time = time_obj
+        self.hd_enabled = hd_enabled
 
     def get_player_init_url(self, productID):
         return self.player_init_url + urllib.urlencode({
@@ -54,7 +55,23 @@ class Parser:
     def get_video_link(self, productID):
         content = self.ua.get(self.get_player_init_url(productID))
         link_re = re.compile("'src'\s*:\s+'(https?://[^']+\\.m3u8)'")
-        return link_re.search(content).group(1)
+        sd_link = link_re.search(content).group(1)
+        hd_link = None
+        if self.hd_enabled: hd_link = self.try_get_hd_link(sd_link)
+        if hd_link: return hd_link
+        return sd_link
+
+    def try_get_hd_link(self, sd_link):
+        hd_link = re.sub(".smil/", "-hd1-hd2.smil/", sd_link)
+        try:
+            self.ua.get(hd_link)
+        except urllib2.HTTPError, e:
+            if e.code == 404:
+                return None
+            else:
+                raise
+
+        return hd_link
 
     def get_next_list(self, link):
         content = self.ua.get(link)

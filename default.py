@@ -42,8 +42,9 @@ try:
     _icon_ = xbmc.translatePath(os.path.join(_addon_.getAddonInfo('path'), 'icon.png'))
     _handle_ = int(sys.argv[1])
     _baseurl_ = sys.argv[0]
-    _play_parser = PrimaPlay.Parser()
-
+    _hd_enabled = False;
+    if (_addon_.getSetting('hd_enabled') == 'true'): _hd_enabled = True
+    _play_parser = PrimaPlay.Parser(hd_enabled=_hd_enabled)
 
     def main_menu(pageurl):
         page = _play_parser.get_page(pageurl)

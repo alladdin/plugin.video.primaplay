@@ -3,6 +3,7 @@
 import unittest
 import os, sys
 import PrimaPlay
+import urllib2
 
 os.chdir(os.path.dirname(sys.argv[0]))
 
@@ -15,6 +16,7 @@ class mockUserAgent:
         self.filenames = filenames
 
     def get(self, url):
+        if len(self.filenames) <= 0: raise urllib2.HTTPError(url, 404, 'Not found', None, None)
         fl = open(self.filenames.pop(0), 'r')
         content = fl.read()
         return content
@@ -30,8 +32,20 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(prima_play.get_player_init_url('p135603'),
             'http://play.iprima.cz/prehravac/init?_ts=1450875766&_infuse=1&productId=p135603')
 
-    def test_get_video_link(self):
+    def test_get_video_link__sd(self):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js']), mockTime())
+
+        self.assertEqual(prima_play.get_video_link('p135603'),
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
+
+    def test_get_video_link__hd(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js', 'test_player_init.js']), mockTime())
+
+        self.assertEqual(prima_play.get_video_link('p135603'),
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8')
+
+    def test_get_video_link__force_sd(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js', 'test_player_init.js']), mockTime(), False)
 
         self.assertEqual(prima_play.get_video_link('p135603'),
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
