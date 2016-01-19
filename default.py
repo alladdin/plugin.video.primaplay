@@ -45,14 +45,20 @@ try:
     _hd_enabled = False;
     if (_addon_.getSetting('hd_enabled') == 'true'): _hd_enabled = True
     _play_parser = PrimaPlay.Parser(hd_enabled=_hd_enabled)
+    _play_account = None
+    if (_addon_.getSetting('account_enabled') == 'true'):
+        _play_account = PrimaPlay.Account( _addon_.getSetting('account_email'), _addon_.getSetting('account_password'), _play_parser )
 
-    def main_menu(pageurl):
+    def main_menu(pageurl, list_only = False):
         page = _play_parser.get_page(pageurl)
-        if page.player:
-            add_player(page.player)
-        else:
-            add_search_menu()
-        add_filters(page, pageurl)
+        if not list_only:
+            if page.player:
+                add_player(page.player)
+            else:
+                add_search_menu()
+                add_account_menu()
+            add_filters(page, pageurl)
+
         for video_list in page.video_lists:
             if video_list.title: add_title(video_list)
             add_item_list(video_list.item_list)
@@ -70,6 +76,13 @@ try:
         search_query = keyboard.getText()
         if len(search_query) <= 1: return
         main_menu(_play_parser.get_search_url(search_query))
+
+    def account():    
+        if not _play_account.login():
+            li = list_item('[B]Chyba přihlášení![/B] Zkontrolujte e-mail a heslo.')
+            xbmcplugin.addDirectoryItem(handle=_handle_, url='#', listitem=li, isFolder=True)
+            return
+        main_menu(_play_account.video_list_url, True)
 
     def remove_filter(removefilterurl):
         link = _play_parser.get_redirect_from_remove_link(removefilterurl)
@@ -103,6 +116,12 @@ try:
     def add_search_menu():
         li = list_item(u'[B]Hledej[/B]')
         url = get_menu_link( action = 'SEARCH' )
+        xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+
+    def add_account_menu():
+        if _play_account is None: return
+        li = list_item(u'[B]Můj PLAY[/B]')
+        url = get_menu_link( action = 'ACCOUNT' )
         xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
     def add_title(video_list):
@@ -177,6 +196,9 @@ try:
             xbmcplugin.endOfDirectory(_handle_, updateListing=True)
         elif action == "SEARCH":
             search()
+            xbmcplugin.endOfDirectory(_handle_)
+        elif action == "ACCOUNT":
+            account()
             xbmcplugin.endOfDirectory(_handle_)
         elif action == "PAGE":
             main_menu(linkurl)

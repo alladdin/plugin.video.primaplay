@@ -21,6 +21,9 @@ class mockUserAgent:
         content = fl.read()
         return content
 
+    def post(self, url, params):
+        return self.get(url)
+
 class PrimaPlayUnitTest(unittest.TestCase):
  
     def setUp(self):
@@ -162,7 +165,26 @@ class PrimaPlayUnitTest(unittest.TestCase):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_remove_all_filters.html']), mockTime())
         self.assertEqual(prima_play.get_redirect_from_remove_link("http://remove_link"),
             'http://play.iprima.cz/prostreno')
-        
+
+    def test_Account_login(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_homepage.html', 'test_homepage_logged.html']), mockTime())
+        parser_account = PrimaPlay.Account( 'text@example.com', 'password', prima_play )
+        self.assertEqual(parser_account.login(), True)
+
+    def test_get_page__moje_play(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_moje_play.html']), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz/moje-play')
+
+        self.assertEqual(page.player, None)
+        self.assertEqual(len(page.video_lists), 1)
+        self.assertEqual(page.video_lists[0].title, u'Moje oblíbené Spravovat oblíbené')
+        self.assertEqual(page.video_lists[0].link, None)
+        self.assertEqual(len(page.video_lists[0].item_list), 1)
+        self.assertEqual(page.video_lists[0].item_list[0].title,
+            u'Prostřeno! 13 Řad , 1023 Epizod')
+        self.assertEqual(page.video_lists[0].item_list[0].link,
+            'http://play.iprima.cz/prostreno')
+        self.assertEqual(len(page.filter_lists), 0)
 
 if __name__ == '__main__':
     unittest.main()

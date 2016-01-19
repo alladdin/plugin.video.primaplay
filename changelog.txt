@@ -1,4 +1,7 @@
-2016-15-01 [0.0.3]
+2016-19-01 [0.3.0]
+ * add My Account section - display favorites from defined account
+
+2016-15-01 [0.2.3]
  * add HD video quality - it's possible to disable it in addon settings
 
 2016-12-01 [0.2.2]

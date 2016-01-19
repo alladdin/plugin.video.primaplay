@@ -3,6 +3,7 @@
 
 import urllib2
 import urllib
+import cookielib
 import time
 import re
 import sys
@@ -13,17 +14,39 @@ __version__ = "1.0.0"
 __email__ = "alladdin@zemres.cz"
 
 class UserAgent:
-    def __init__(self, agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0'):
+    def __init__(self, session_id = None, agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0'):
         self.agent = agent
         self.play_url = 'http://play.iprima.cz'
+        self.cookie_domain = 'play.iprima.cz'
+        self.cookie_port = '80'
+        self.cookie_jar = cookielib.CookieJar()
+        self.cookie_jar.set_cookie(self.cookie('ott_cookies_confirmed', '1'))
+        if session_id: self.cookie_jar.set_cookie(self.cookie('PLAY_SESSION', session_id))
+        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie_jar))
 
     def get(self, url):
-        req = urllib2.Request(self.sanitize_url(url))
-        req.add_header('User-Agent', self.agent)
-        res = urllib2.urlopen(req)
+        req = self.request(url)
+        res = self.opener.open(req)
         output = res.read()
         res.close()
         return output
+
+    def post(self, url, params):
+        req = self.request(url)
+        req.add_data(urllib.urlencode(params))
+        res = self.opener.open(req)
+        output = res.read()
+        res.close()
+        return output
+
+    def cookie(self, name, value):
+        return cookielib.Cookie(None, name, value, self.cookie_port, True, self.cookie_domain, 
+            True, False, '/', True, False, int(time.time()) + 3600, False, '', None, None, False)
+
+    def request(self, url):
+        req = urllib2.Request(self.sanitize_url(url))
+        req.add_header('User-Agent', self.agent)
+        return req
 
     def sanitize_url(self, url):
         abs_url_re = re.compile('^/')
@@ -138,7 +161,7 @@ class Parser:
 
         wrapper_items = re.split('<section class="l-constrained movies-list-carousel-wrapper">', content)
 
-        title_re = re.compile('<h2 class="[^"]+" data-scroll="cid-[^"]+">(.+)</h2>[^<]*<div class="l-movies-list', re.S)
+        title_re = re.compile('<h2 class="[^"]+"(?: data-scroll="cid-[^"]+")?>(.+)</h2>[^<]*<div class="l-movies-list', re.S)
         link_re = re.compile('<h2[^>]*>[^<]*<a href="([^"]+)">', re.S)
         for wrapper_item in wrapper_items:
             title_result = title_re.search(wrapper_item)
@@ -268,7 +291,32 @@ class Parser:
         result = result.replace("\r",' ')
         result = re.sub('\s+', ' ', result)
         return result.strip()
-    
+
+class Account:
+    def __init__(self, email, password, parser):
+        self.page_for_login = 'http://play.iprima.cz/'
+        self.auth_params = {
+            'remember': 'true',
+            'email': email,
+            'password': password,
+            'redirectUri': self.page_for_login
+        }
+        self.parser = parser
+        self.login_url_re = re.compile('action="(https://[^/]+/login/formular[^"]+)"', re.S)
+        self.video_list_url = 'http://play.iprima.cz/moje-play'
+
+    def login(self):
+        login_url = self.get_login_url()
+
+        content = self.parser.ua.post(login_url, self.auth_params)
+        if self.login_url_re.search(content): return False
+        return True
+
+    def get_login_url(self):
+        content = self.parser.ua.get(self.page_for_login)
+        return self.login_url_re.search(content).group(1)
+        # https://play.iprima.cz/login/formular?csrfToken=142090b66b24c01af02aa7c23a98d890b667b0cd-1453127273565-b29a993b2a09570ee2da1151
+
 class Page:
     def __init__(self, player = None, video_lists = [], filter_lists = [], current_filters = None):
         self.video_lists = video_lists
