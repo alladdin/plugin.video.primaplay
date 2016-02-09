@@ -1,3 +1,6 @@
+2016-09-02 [0.3.1]
+ * fixed bug - play also videos without image
+
 2016-19-01 [0.3.0]
  * add My Account section - display favorites from defined account
 

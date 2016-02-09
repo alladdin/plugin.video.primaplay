@@ -90,6 +90,15 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(page.video_lists[0].item_list[0].link,
             'http://play.iprima.cz/prostreno/videa/prostreno-xii-9')
 
+    def test_get_page__player_page_2(self):
+        prima_play = PrimaPlay.Parser(mockUserAgent(['test_video_page-2.html', 'test_player_init-2.js', 'test_player_init-2.js']), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz/cestovani-cervi-dirou-s-morganem-freemanem-ii-9')
+
+        self.assertEqual(page.player.title, u'Cestování červí dírou s Morganem Freemanem II (7)')
+        self.assertEqual(page.player.video_link,
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0001/4844/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8')
+        self.assertEqual(page.player.image_url, None)
+
     def test_get_page__homepage(self):
         prima_play = PrimaPlay.Parser(mockUserAgent(['test_homepage.html']), mockTime())
         page = prima_play.get_page('http://play.iprima.cz')

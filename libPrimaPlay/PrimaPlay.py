@@ -130,13 +130,15 @@ class Parser:
         return self.make_full_link(redirect_result.group(1), link)
 
     def get_page_player(self, content):
-        fake_player_re = re.compile('<div id="fake-player" class="[^"]+" data-product="([^"]+)">[^<]*<img src="([^"]+)" alt="([^"]+)"', re.S)
+        title_re = re.compile('<meta property="og:title" content="([^"]+)"/>', re.S)
+        fake_player_re = re.compile('<div id="fake-player" class="[^"]+" data-product="([^"]+)">[^<]*(?:<img src="([^"]+)")?', re.S)
         fake_player_result = fake_player_re.search(content)
         if fake_player_result is None:
             return None
+        title_result = title_re.search(content)
         product_id = fake_player_result.group(1)
         image_url = fake_player_result.group(2)
-        title = fake_player_result.group(3).strip().decode('utf-8')
+        title = title_result.group(1).strip().decode('utf-8')
         video_link = self.get_video_link(product_id)
         return Player(title, video_link, image_url)
 
