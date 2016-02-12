@@ -49,6 +49,8 @@ try:
     if (_addon_.getSetting('account_enabled') == 'true'):
         _play_account = PrimaPlay.Account( _addon_.getSetting('account_email'), _addon_.getSetting('account_password'), _play_parser )
 
+    xbmcplugin.setContent(_handle_, 'tvshows')
+
     def main_menu(pageurl, list_only = False):
         page = _play_parser.get_page(pageurl)
         if not list_only:
@@ -133,7 +135,7 @@ try:
 
     def add_item_list(item_list):
         for item in item_list:
-            li = list_item(item.title, item.image_url)
+            li = list_item(item.title, item.image_url, item.description, item.broadcast_date, item.year)
             url = get_menu_link( action = 'PAGE', linkurl = item.link )
             xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
     
@@ -143,14 +145,20 @@ try:
         xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
     def add_player(player):
-        li = list_item(u"[B]Přehraj:[/B] "+player.title, player.image_url)
+        li = list_item(u"[B]Přehraj:[/B] "+player.title, player.image_url, player.description, player.broadcast_date, player.year)
         xbmcplugin.addDirectoryItem(handle=_handle_, url=player.video_link, listitem=li, isFolder=False)
 
-    def list_item(label, thumbnail = None):
+    def list_item(label, thumbnail = None, description = None, broadcast_date = None, year = None):
         li = xbmcgui.ListItem(label)
-        liVideo = {'title': label}
+        liVideo = {
+            'title': label,
+            'plot': description,
+            'year': year,
+            'aired': broadcast_date
+        }
         if thumbnail:
             li.setThumbnailImage(thumbnail)
+            li.setArt({'poster': thumbnail, 'fanart': thumbnail})
         li.setInfo("video", liVideo)
         return li
 

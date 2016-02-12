@@ -80,6 +80,11 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
         self.assertEqual(page.player.image_url,
             'http://static.play-backend.iprima.cz/cdn/img/splash169/p135609-p183945/l_xhdpi')
+        self.assertEqual(page.player.description,
+            'Zábavná porce vašeho oblíbeného pořadu Prostřeno!')
+        self.assertEqual(page.player.broadcast_date, '16.12.2015')
+        self.assertEqual(page.player.duration, '42 min')
+        self.assertEqual(page.player.year, '2015')
         self.assertEqual(len(page.video_lists), 2)
         self.assertEqual(page.video_lists[0].title, u'Další epizody')
         self.assertEqual(page.video_lists[0].link,
@@ -113,6 +118,7 @@ class PrimaPlayUnitTest(unittest.TestCase):
             u'Vinaři 2 Řady , 32 Epizod')
         self.assertEqual(page.video_lists[0].item_list[0].link,
             'http://play.iprima.cz/vinari')
+        self.assertTrue(page.video_lists[0].item_list[0].description);
         self.assertEqual(len(page.filter_lists), 3)
         self.assertEqual(page.filter_lists[0].title, u'Žánr')
         self.assertEqual(len(page.filter_lists[0].item_list), 31)

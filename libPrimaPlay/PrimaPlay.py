@@ -131,16 +131,30 @@ class Parser:
 
     def get_page_player(self, content):
         title_re = re.compile('<meta property="og:title" content="([^"]+)"/>', re.S)
+        description_re = re.compile('<meta property="og:description" content="([^"]+)"/>', re.S)
+        additional_info_re = re.compile('<span data-jnp="i.BroadcastDate">[^<]*</span>:([^\|]*)\|([^\|]*)\|([^<]*)</p>', re.S)
         fake_player_re = re.compile('<div id="fake-player" class="[^"]+" data-product="([^"]+)">[^<]*(?:<img src="([^"]+)")?', re.S)
         fake_player_result = fake_player_re.search(content)
         if fake_player_result is None:
             return None
         title_result = title_re.search(content)
+        description_result = description_re.search(content)
+        additional_info_result = additional_info_re.search(content)
         product_id = fake_player_result.group(1)
         image_url = fake_player_result.group(2)
         title = title_result.group(1).strip().decode('utf-8')
+        description = None
+        broadcast_date = None
+        duration = None
+        year = None
+        if description_result:
+            description = description_result.group(1)
+        if additional_info_result:
+            broadcast_date = additional_info_result.group(1).strip()
+            duration = additional_info_result.group(2).strip()
+            year = additional_info_result.group(3).strip()
         video_link = self.get_video_link(product_id)
-        return Player(title, video_link, image_url)
+        return Player(title, video_link, image_url, description, broadcast_date, duration, year)
 
     def get_video_lists(self, content, src_link):
         list = []
@@ -188,17 +202,28 @@ class Parser:
         item_link_re = re.compile('<a href="([^"]+)">')
         item_img_re = re.compile('<img data-srcset="(\S+)')
         item_title_re = re.compile('<div class="back">[^<]*<a[^>]*>[^<]*<div class="header">(.+)</div>[^<]*<div class="content">', re.S)
+        item_description_re = re.compile('<div class="content">[^<]*<p class="promo-notice[^"]*">([^<]*)</p>', re.S)
+        item_additional_re = re.compile('<p>[^\|]*\|\s*(\d{4})[^<]*</p>[^<]*(?:<p data-jnp="i.BroadcastDate">[^:]+: ([^<]+)</p>[^<]*)<div class="attributes">', re.S)
 
         for html_item in html_items:
             link_result = item_link_re.search(html_item)
             img_result = item_img_re.search(html_item)
             title_result = item_title_re.search(html_item)
+            description_result = item_description_re.search(html_item)
+            additional_result = item_additional_re.search(html_item)
             if title_result is None: continue
             title = self.strip_tags(title_result.group(1))
             link = self.make_full_link(link_result.group(1), src_link)
             image_url = None
+            description = None
+            broadcast_date = None
+            year = None
             if img_result: image_url = img_result.group(1)
-            list.append(Item(title.decode('utf-8'), link, image_url))
+            if description_result: description = description_result.group(1).strip().decode('utf-8')
+            if additional_result:
+                year = additional_result.group(1).strip()
+                broadcast_date = additional_result.group(2).strip()
+            list.append(Item(title.decode('utf-8'), link, image_url, description, broadcast_date, None, year))
         return list
 
     def get_filter_lists(self, content, src_link):
@@ -334,10 +359,14 @@ class PageVideoList:
         self.item_list = item_list
 
 class Player:
-    def __init__(self, title, video_link, image_url):
+    def __init__(self, title, video_link, image_url, description, broadcast_date = None, duration = None, year = None):
         self.title = title
         self.video_link = video_link
         self.image_url = image_url
+        self.description = description
+        self.broadcast_date = broadcast_date
+        self.year = year
+        self.duration = duration
 
 class NextList:
     def __init__(self, next_link, list):
@@ -345,7 +374,11 @@ class NextList:
         self.list = list
 
 class Item:
-    def __init__(self, title, link, image_url = None):
+    def __init__(self, title, link, image_url = None, description = None, broadcast_date = None, duration = None, year = None):
         self.title = title
         self.link = link
         self.image_url = image_url
+        self.description = description
+        self.broadcast_date = broadcast_date
+        self.year = year
+        self.duration = duration

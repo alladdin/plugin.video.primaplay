@@ -1,3 +1,7 @@
+2016-12-02 [0.3.2]
+ * add description and other media info for videos
+ * add content type tvshows for addon - lists could be switched to media info view
+
 2016-09-02 [0.3.1]
  * fixed bug - play also videos without image
 
