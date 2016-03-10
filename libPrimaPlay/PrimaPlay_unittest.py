@@ -7,22 +7,59 @@ import urllib2
 
 os.chdir(os.path.dirname(sys.argv[0]))
 
+user = 'text@example.com';
+password = 'password';
+
 class mockTime:
     def time(self):
         return 1450875766
 
 class mockUserAgent:
-    def __init__(self, filenames = []):
-        self.filenames = filenames
+    def __init__(self, url_map = {}):
+        self.ua = PrimaPlay.UserAgent()
+        self.url_map = {
+            'http://play.iprima.cz/prehravac/init?_ts=1450875766&_infuse=1&productId=p135603': lambda url: 'test_player_init.js',
+            'http://play.iprima.cz/': lambda url: 'test_homepage.html',
+            'http://play.iprima.cz': lambda url: 'test_homepage.html',
+            'http://play.iprima.cz/prostreno': lambda url: 'test_filters.html',
+            'http://play.iprima.cz/vysledky-hledani-vse?query=prostreno': lambda url: 'test_search_page.html',
+            'http://play.iprima.cz/prostreno-IX-9': lambda url: 'test_video_page.html',
+            'http://play.iprima.cz/moje-play': lambda url: 'test_moje_play.html',
+            'https://play.iprima.cz/login/nav/formular?csrfToken=868668da5dd5d622ddee5738cf226523ccc6b708-1451918185394-55fbc39b6ea5a369d8723b76': lambda url: 'test_homepage_logged.html',
+            'http://play.iprima.cz/prostreno?cat[]=EPISODE&src=p14877&sort[]=Rord&sort[]=latest': lambda url: 'test_prostreno_epizody.html',
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8': lambda url: self.raise_not_found(url),
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0001/4844/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8': lambda url: 'test_homepage.html',
+            'http://play.iprima.cz/prehravac/init?_ts=1450875766&_infuse=1&productId=p148175': lambda url: 'test_player_init-2.js',
+            'http://play.iprima.cz/cestovani-cervi-dirou-s-morganem-freemanem-ii-9': lambda url: 'test_video_page-2.html',
+            'http://play.iprima.cz/prostreno?season=p14894&action=remove': lambda url: 'test_remove_all_filters.html',
+            'https://play.iprima.cz/tdi/dalsi?filter=allShows&sort[]=title&offset=54': lambda url: 'test_ajax_response.data',
+            'https://play.iprima.cz/tdi/dalsi/prostreno?season=p14877&sort[]=Rord&sort[]=latest&offset=18': lambda url: 'test_ajax_response_p.data'
+        }
+        self.url_map.update(url_map)
 
     def get(self, url):
-        if len(self.filenames) <= 0: raise urllib2.HTTPError(url, 404, 'Not found', None, None)
-        fl = open(self.filenames.pop(0), 'r')
+        filename = self._get_filename_from_map(url)
+        return self._get_cache(filename)
+
+    def post(self, url, params):
+        filename = self._get_filename_from_map(url)
+        return self._get_cache(filename)
+
+    def _get_filename_from_map(self, url):
+        if not self.url_map.has_key(url):
+            print "ERROR! not found in url map: " + url
+            raise urllib2.HTTPError(url, 500, 'Internal server error', None, None)
+            return
+        get_url = self.url_map[url]
+        return get_url(url)
+
+    def _get_cache(self, filename):
+        fl = open(filename, 'r')
         content = fl.read()
         return content
 
-    def post(self, url, params):
-        return self.get(url)
+    def raise_not_found(self, url):
+        raise urllib2.HTTPError(url, 404, 'Not found', None, None)
 
 class PrimaPlayUnitTest(unittest.TestCase):
  
@@ -30,33 +67,35 @@ class PrimaPlayUnitTest(unittest.TestCase):
         pass
  
     def test_get_player_init_link(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
 
         self.assertEqual(prima_play.get_player_init_url('p135603'),
             'http://play.iprima.cz/prehravac/init?_ts=1450875766&_infuse=1&productId=p135603')
 
     def test_get_video_link__sd(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
 
         self.assertEqual(prima_play.get_video_link('p135603'),
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
 
     def test_get_video_link__hd(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js', 'test_player_init.js']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent({
+            'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8': lambda url: 'test_homepage.html',
+        }), mockTime())
 
         self.assertEqual(prima_play.get_video_link('p135603'),
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8')
 
     def test_get_video_link__force_sd(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_player_init.js', 'test_player_init.js']), mockTime(), False)
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime(), False)
 
         self.assertEqual(prima_play.get_video_link('p135603'),
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4.smil/playlist.m3u8')
 
     def test_get_next_list(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_ajax_response.data']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
 
-        next_list = prima_play.get_next_list('https://play.iprima.cz/tdi/dalsi?')
+        next_list = prima_play.get_next_list('https://play.iprima.cz/tdi/dalsi?filter=allShows&sort[]=title&offset=54')
         self.assertEqual(next_list.next_link,
             'https://play.iprima.cz/tdi/dalsi?filter=allShows&sort[]=title&offset=72')
 
@@ -65,14 +104,14 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(next_list.list[0].link, 'http://play.iprima.cz/nejvetsi-esa-mafie-1')
 
     def test_get_next_list_series(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_ajax_response_p.data']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
 
-        next_list = prima_play.get_next_list('https://play.iprima.cz/tdi/dalsi/prostreno?')
+        next_list = prima_play.get_next_list('https://play.iprima.cz/tdi/dalsi/prostreno?season=p14877&sort[]=Rord&sort[]=latest&offset=18')
         self.assertEqual(next_list.next_link,
             'https://play.iprima.cz/tdi/dalsi/prostreno?season=p14877&sort[]=Rord&sort[]=latest&offset=36')
 
     def test_get_page__player_page(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_video_page.html', 'test_player_init.js']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
         page = prima_play.get_page('http://play.iprima.cz/prostreno-IX-9')
 
         self.assertEqual(page.player.title, u'Prostřeno!')
@@ -96,7 +135,7 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://play.iprima.cz/prostreno/videa/prostreno-xii-9')
 
     def test_get_page__player_page_2(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_video_page-2.html', 'test_player_init-2.js', 'test_player_init-2.js']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
         page = prima_play.get_page('http://play.iprima.cz/cestovani-cervi-dirou-s-morganem-freemanem-ii-9')
 
         self.assertEqual(page.player.title, u'Cestování červí dírou s Morganem Freemanem II (7)')
@@ -105,7 +144,7 @@ class PrimaPlayUnitTest(unittest.TestCase):
         self.assertEqual(page.player.image_url, None)
 
     def test_get_page__homepage(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_homepage.html']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
         page = prima_play.get_page('http://play.iprima.cz')
 
         self.assertEqual(page.player, None)
@@ -127,8 +166,8 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://play.iprima.cz?genres[]=p14197')
 
     def test_get_page__episodes(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_prostreno_epizody.html']), mockTime())
-        page = prima_play.get_page('http://play.iprima.cz')
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz/prostreno?cat[]=EPISODE&src=p14877&sort[]=Rord&sort[]=latest')
 
         self.assertEqual(page.player, None)
         self.assertEqual(len(page.video_lists), 1)
@@ -151,8 +190,8 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://play.iprima.cz/prostreno?season=p14883&sort[]=Rord&sort[]=latest')
 
     def test_get_page__search(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_search_page.html']), mockTime())
-        page = prima_play.get_page('http://play.iprima.cz')
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz/vysledky-hledani-vse?query=prostreno')
 
         self.assertEqual(page.player, None)
         self.assertEqual(len(page.video_lists), 3)
@@ -166,8 +205,8 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://play.iprima.cz/vip-prostreno')
 
     def test_get_page__current_filters(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_filters.html']), mockTime())
-        page = prima_play.get_page('http://play.iprima.cz')
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
+        page = prima_play.get_page('http://play.iprima.cz/prostreno')
 
         self.assertEqual(page.current_filters.link,
             'https://play.iprima.cz/tdi/filtr/zrusit/prostreno?availability=new&season=p14894')
@@ -177,17 +216,17 @@ class PrimaPlayUnitTest(unittest.TestCase):
             'http://play.iprima.cz/prostreno?season=p14894&action=remove')
 
     def test_get_redirect_from_remove_link(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_remove_all_filters.html']), mockTime())
-        self.assertEqual(prima_play.get_redirect_from_remove_link("http://remove_link"),
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
+        self.assertEqual(prima_play.get_redirect_from_remove_link("http://play.iprima.cz/prostreno?season=p14894&action=remove"),
             'http://play.iprima.cz/prostreno')
 
     def test_Account_login(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_homepage.html', 'test_homepage_logged.html']), mockTime())
-        parser_account = PrimaPlay.Account( 'text@example.com', 'password', prima_play )
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
+        parser_account = PrimaPlay.Account( user, password, prima_play )
         self.assertEqual(parser_account.login(), True)
 
     def test_get_page__moje_play(self):
-        prima_play = PrimaPlay.Parser(mockUserAgent(['test_moje_play.html']), mockTime())
+        prima_play = PrimaPlay.Parser(mockUserAgent(), mockTime())
         page = prima_play.get_page('http://play.iprima.cz/moje-play')
 
         self.assertEqual(page.player, None)

@@ -13,7 +13,7 @@ __license__ = "GPL 2"
 __version__ = "1.0.0"
 __email__ = "alladdin@zemres.cz"
 
-class UserAgent:
+class UserAgent(object):
     def __init__(self, session_id = None, agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:43.0) Gecko/20100101 Firefox/43.0'):
         self.agent = agent
         self.play_url = 'http://play.iprima.cz'
@@ -323,13 +323,13 @@ class Account:
     def __init__(self, email, password, parser):
         self.page_for_login = 'http://play.iprima.cz/'
         self.auth_params = {
-            'remember': 'true',
-            'email': email,
-            'password': password,
-            'redirectUri': self.page_for_login
+            'nav_remember': 'true',
+            'nav_email': email,
+            'nav_password': password,
+            'nav_redirectUri': self.page_for_login
         }
         self.parser = parser
-        self.login_url_re = re.compile('action="(https://[^/]+/login/formular[^"]+)"', re.S)
+        self.login_url_re = re.compile('action="(https://[^/]+/login/(?:nav/)?formular[^"]+)"', re.S)
         self.video_list_url = 'http://play.iprima.cz/moje-play'
 
     def login(self):
