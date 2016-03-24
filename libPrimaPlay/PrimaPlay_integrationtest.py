@@ -51,10 +51,10 @@ class PrimaPlayIntegrationTest(unittest.TestCase):
         self.assertTrue(len(page.video_lists[0].item_list))
         self.assertEqual(len(page.filter_lists), 3)
         self.assertEqual(page.filter_lists[0].title, u'Žánr')
-        self.assertEqual(len(page.filter_lists[0].item_list), 33)
-        self.assertEqual(page.filter_lists[0].item_list[0].title, u'Životopisný')
+        self.assertTrue(len(page.filter_lists[0].item_list))
+        self.assertEqual(page.filter_lists[0].item_list[0].title, u'Akční')
         self.assertEqual(page.filter_lists[0].item_list[0].link,
-            'http://play.iprima.cz?genres[]=p14220')
+            'http://play.iprima.cz?genres[]=p14198')
 
     def test_prostreno(self):
         page = self.play_parser.get_page('http://play.iprima.cz/prostreno')
