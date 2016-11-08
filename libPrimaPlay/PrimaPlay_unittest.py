@@ -25,7 +25,7 @@ class mockUserAgent:
             'http://play.iprima.cz/vysledky-hledani-vse?query=prostreno': lambda url: 'test_search_page.html',
             'http://play.iprima.cz/prostreno-IX-9': lambda url: 'test_video_page.html',
             'http://play.iprima.cz/moje-play': lambda url: 'test_moje_play.html',
-            'https://play.iprima.cz/login/nav/formular?csrfToken=868668da5dd5d622ddee5738cf226523ccc6b708-1451918185394-55fbc39b6ea5a369d8723b76': lambda url: 'test_homepage_logged.html',
+            'https://play.iprima.cz/tdi/login/nav/form?csrfToken=868668da5dd5d622ddee5738cf226523ccc6b708-1451918185394-55fbc39b6ea5a369d8723b76': lambda url: 'test_homepage_logged.html',
             'http://play.iprima.cz/prostreno?cat[]=EPISODE&src=p14877&sort[]=Rord&sort[]=latest': lambda url: 'test_prostreno_epizody.html',
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0000/5314/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8': lambda url: self.raise_not_found(url),
             'http://prima-vod-prep.service.cdn.cra.cz/vod_Prima/_definst_/0001/4844/cze-ao-sd1-sd2-sd3-sd4-hd1-hd2.smil/playlist.m3u8': lambda url: 'test_homepage.html',

@@ -329,7 +329,7 @@ class Account:
             'nav_redirectUri': self.page_for_login
         }
         self.parser = parser
-        self.login_url_re = re.compile('action="(https://[^/]+/login/(?:nav/)?formular[^"]+)"', re.S)
+        self.login_url_re = re.compile('action="(https://[^/]+(?:/tdi)?/login/(?:nav/)?form(?:ular)?[^"]+)"', re.S)
         self.video_list_url = 'http://play.iprima.cz/moje-play'
 
     def login(self):
@@ -343,6 +343,7 @@ class Account:
         content = self.parser.ua.get(self.page_for_login)
         return self.login_url_re.search(content).group(1)
         # https://play.iprima.cz/login/formular?csrfToken=142090b66b24c01af02aa7c23a98d890b667b0cd-1453127273565-b29a993b2a09570ee2da1151
+        # https://play.iprima.cz/tdi/login/nav/form?csrfToken=e925f6428ac151c8675ea15fc4cf0b9d09b1613f-1478592531500-e2236dd1ce0b6b725c253abe
 
 class Page:
     def __init__(self, player = None, video_lists = [], filter_lists = [], current_filters = None):
