@@ -81,7 +81,7 @@ class PrimaPlayIntegrationTest(unittest.TestCase):
         page = self.play_parser.get_page('http://play.iprima.cz/prostreno')
         self.assertEqual(page.player, None)
         self.assertEqual(len(page.video_lists), 3)
-        self.assertEqual(page.video_lists[0].title, u'Všechny epizody')
+        self.assertRegexpMatches(page.video_lists[0].title, u'^Všechny epizody')
         self.assertEqual(len(page.video_lists[0].item_list), 20)
 
     def test_prostreno_epizodes(self):
