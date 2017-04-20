@@ -1,4 +1,7 @@
-2016-01-31 [0.3.7]
+2017-04-20 [0.3.8]
+ * Don't verify certificates for SSL
+
+2017-01-31 [0.3.7]
  * Fixed url for player init
  * Fixed parsing of video player file
 
