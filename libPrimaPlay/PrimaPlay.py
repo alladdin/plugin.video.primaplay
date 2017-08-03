@@ -22,6 +22,7 @@ class UserAgent(object):
         self.cookie_port = '80'
         self.cookie_jar = cookielib.CookieJar()
         self.cookie_jar.set_cookie(self.cookie('ott_cookies_confirmed', '1'))
+        self.cookie_jar.set_cookie(self.cookie('ott_adult_confirmed', '1'))
         if session_id: self.cookie_jar.set_cookie(self.cookie('PLAY_SESSION', session_id))
 
         if hasattr(ssl, 'create_default_context'):

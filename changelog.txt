@@ -1,3 +1,6 @@
+2017-08-03 [0.3.9]
+ * auto confirm adult content
+
 2017-04-20 [0.3.8]
  * Don't verify certificates for SSL
 
