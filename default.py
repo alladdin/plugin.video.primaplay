@@ -6,6 +6,7 @@ import xbmcgui
 import xbmcplugin
 import xbmcaddon
 import traceback
+import time
 from xbmcplugin import addDirectoryItem
 from libPrimaPlay import PrimaPlay
 import urllib
@@ -52,7 +53,7 @@ try:
     xbmcplugin.setContent(_handle_, 'tvshows')
 
     def main_menu(pageurl, list_only = False):
-        page = _play_parser.get_page(pageurl)
+        page = _play_parser.get_page(pageurl+'?strana=1')
         if not list_only:
             if page.player:
                 add_player(page.player)
@@ -65,6 +66,18 @@ try:
             if video_list.title: add_title(video_list)
             add_item_list(video_list.item_list)
             if video_list.next_link: add_next_link(video_list.next_link)
+
+    def shows_menu(pageurl, list_only = False):
+        page = _play_parser.get_shows(pageurl)
+        for video_list in page.video_lists:
+            if video_list.title: add_show(video_list)
+            add_item_list(video_list.item_list)
+            if video_list.next_link: add_next_link(video_list.next_link)
+
+    def show_navigation(pageurl, list_only = False):
+        page = _play_parser.get_show_navigation(pageurl)
+        for video_list in page.video_lists:
+            if video_list.title: add_title(video_list)
 
     def next_menu(nexturl):
         next_list = _play_parser.get_next_list(nexturl)
@@ -126,6 +139,15 @@ try:
         url = get_menu_link( action = 'ACCOUNT' )
         xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
 
+    def add_show(video_list):
+        url = '#'
+        if video_list.link:
+            url = get_menu_link( action = 'SHOW-NAV', linkurl = video_list.link )
+        if video_list.thumbnail:
+            thumbnail = video_list.thumbnail
+        li = list_item(video_list.title, thumbnail)
+        xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+
     def add_title(video_list):
         li = list_item('[B]'+video_list.title+'[/B]')
         url = '#'
@@ -135,9 +157,12 @@ try:
 
     def add_item_list(item_list):
         for item in item_list:
+
             li = list_item(item.title, item.image_url, item.description, item.broadcast_date, item.year)
-            url = get_menu_link( action = 'PAGE', linkurl = item.link )
-            xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=True)
+            url = item.link
+            if item.isFolder: url = get_menu_link( action = 'PAGE', linkurl = item.link )
+
+            xbmcplugin.addDirectoryItem(handle=_handle_, url=url, listitem=li, isFolder=item.isFolder)
     
     def add_next_link(next_link):
         li = list_item(u'Další stránka')
@@ -148,6 +173,20 @@ try:
         li = list_item(u"[B]Přehraj:[/B] "+player.title, player.image_url, player.description, player.broadcast_date, player.year)
         xbmcplugin.addDirectoryItem(handle=_handle_, url=player.video_link, listitem=li, isFolder=False)
 
+    def play_video(link):
+        product_id = _play_parser.get_productID(link)
+        
+        video = _play_parser.get_video(product_id)
+        if video.link is None:
+            raise Exception('Video není dostupné')
+            return
+
+        video_item = xbmcgui.ListItem(video.title)
+        video_item.setInfo('video', {'Title': video.title})
+
+        player = xbmc.Player()
+        player.play(video.link, video_item)
+    
     def list_item(label, thumbnail = None, description = None, broadcast_date = None, year = None):
         li = xbmcgui.ListItem(label)
         liVideo = {
@@ -208,11 +247,17 @@ try:
         elif action == "ACCOUNT":
             account()
             xbmcplugin.endOfDirectory(_handle_)
-        elif action == "PAGE":
-            main_menu(linkurl)
+        elif action == "SHOW-NAV":
+            show_navigation(linkurl)
             xbmcplugin.endOfDirectory(_handle_)
+        elif action == "PAGE":
+            main_menu(linkurl, list_only=True)
+            xbmcplugin.endOfDirectory(_handle_)
+        elif action == "PLAY":
+            play_video(linkurl)
         else:
-            main_menu("http://play.iprima.cz")
+            ts = int(time.time())
+            shows_menu("https://prima.iprima.cz/iprima-api/ListWithFilter/Series/Content?ts="+ str(ts) +"&filter=all&featured_queue_name=iprima:prima-featured-series&large_size_items_cnt=3&channel_restriction=prima")
             xbmcplugin.endOfDirectory(_handle_)
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()
