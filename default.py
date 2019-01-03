@@ -183,6 +183,7 @@ try:
 
         video_item = xbmcgui.ListItem(video.title)
         video_item.setInfo('video', {'Title': video.title})
+        video_item.setThumbnailImage(video.image_url)
 
         player = xbmc.Player()
         player.play(video.link, video_item)
@@ -257,7 +258,7 @@ try:
             play_video(linkurl)
         else:
             ts = int(time.time())
-            shows_menu("https://prima.iprima.cz/iprima-api/ListWithFilter/Series/Content?ts="+ str(ts) +"&filter=all&featured_queue_name=iprima:prima-featured-series&large_size_items_cnt=3&channel_restriction=prima")
+            shows_menu("https://prima.iprima.cz/iprima-api/ListWithFilter/Series/Content?ts="+ str(ts) +"&filter=all&featured_queue_name=iprima:hp-featured-series")
             xbmcplugin.endOfDirectory(_handle_)
     except Exception as ex:
         exc_type, exc_value, exc_traceback = sys.exc_info()

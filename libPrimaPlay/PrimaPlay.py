@@ -11,6 +11,7 @@ import ssl
 import xbmc
 import xbmcaddon
 import json
+import YDStreamExtractor
 
 __author__ = "Ladislav Dokulil"
 __license__ = "GPL 2"
@@ -103,31 +104,47 @@ class Parser:
         content = self.ua.get(episode_link)
 
         product_id_re = re.compile('src="https://api.play-backend.iprima.cz/prehravac/embedded\?id=(.*?)"', re.S)
+        youtube_re = re.compile('src="https://www.youtube.com/embed/([^"\?]*)', re.S)
+
         product_id_result = product_id_re.search(content)
+        youtube_result = None
 
         if product_id_result is None:
-            return None
-
-        product_id = product_id_result.group(1)
+            youtube_result = youtube_re.search(content)
+            if youtube_result is None: return None
+            product_id = 'yt_'+youtube_result.group(1)
+        else:
+            product_id = product_id_result.group(1)
 
         return product_id
 
     def get_video(self, productID):
-        content = self.ua.get(self.get_player_init_url(productID))
+        if 'yt_' in productID:
+            yt_url = 'http://www.youtube.com/watch?v=' + productID.split('yt_',1)[1] 
+            yt_video = YDStreamExtractor.getVideoInfo(yt_url, quality = 3)
+            return Item(yt_video.title, yt_video.streamURL(), yt_video.thumbnail)
+        else:
+            content = self.ua.get(self.get_player_init_url(productID))
 
-        link_re = re.compile("'?src'?\s*:\s+'(https?://[^']+\\.m3u8.*)'")
-        title_re = re.compile("programName: '(.*?)',")
+            link_re = re.compile("'?src'?\s*:\s+'(https?://[^']+\\.m3u8.*)'")
+            title_re = re.compile("programName: '(.*?)',")
+            thumb_re = re.compile("thumbnails: {[\s\n]*url: '(.*?)\$")
 
-        sd_link = link_re.search(content)
-        if sd_link is None: return None
+            sd_link = link_re.search(content)
+            if sd_link is None: return None
 
-        hd_link = None
-        if self.hd_enabled: hd_link = self.try_get_hd_link(sd_link.group(1))
-        if hd_link: return hd_link
+            hd_link = None
+            if self.hd_enabled: hd_link = self.try_get_hd_link(sd_link.group(1))
+            if hd_link: return hd_link
 
-        title = title_re.search(content).group(1)
+            title = title_re.search(content).group(1)
 
-        return Item(title, sd_link.group(1))
+            thumb = None
+            thumb_result = thumb_re.search(content)
+            if thumb_result:
+                thumb = thumb_result.group(1) + '010.jpg'
+            
+            return Item(title, sd_link.group(1), thumb)
 
     def try_get_hd_link(self, sd_link):
         hd_link = re.sub(".smil/", "-hd1-hd2.smil/", sd_link)
@@ -299,6 +316,7 @@ class Parser:
             if title_result is None: continue
             title = self.strip_tags(title_result.group(1))
 
+            if link_result is None: continue
             link = link_result.group(1)
             link = sys.argv[0] + '?' + urllib.urlencode({'action': 'PLAY', 'linkurl': 'https:'+link})
 
