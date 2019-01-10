@@ -1,3 +1,12 @@
+2019-03-01 [0.4.1]
+ * Plugin now displays shows from all Prima channels
+ * Fixed bug when episode list wouldn't load when containing unavailable episodes
+ * YouTube embeds can now be played
+
+2019-02-01 [0.4.0]
+ * Changes to allow scraping new iPrima site
+ * New icon
+
 2017-08-03 [0.3.9]
  * auto confirm adult content
 
