@@ -170,9 +170,13 @@ class Parser:
         return self.get_items_from_wrapper(cdata_match.group(1), '')
 
     def get_next_list_link(self, content):
-        next_link_re = re.compile('<section class="molecule--button--load-more-button">.*?<a href="(.*?)"', re.S)
-        result = next_link_re.search(content)
-        if result: return result.group(1)
+        next_link_section_re = re.compile('<section class="molecule--button--load-more-button">(.*?)</section>', re.S)
+        next_link_re = re.compile('<a href="(.*?)".*?</a>', re.S)
+        result_section = next_link_section_re.search(content, re.DOTALL)
+        if result_section:
+            result_link = next_link_re.search(result_section.group(1))
+            if result_link:
+                return result_link.group(1)
         return None
 
     def get_page(self, link):
@@ -299,12 +303,12 @@ class Parser:
     def get_items_from_wrapper(self, content, src_link):
         list = []
 
-        html_items = re.findall('class="compoment--scope--video-type.*?">(.*?)</a>', content, re.S)
+        html_items = re.findall('<div class="component--scope--episode-latest program">(.*?)</a>', content, re.S)
 
-        item_link_re = re.compile('<a class="compoment--scope--video-type--link" href="(.*?)"', re.S)
-        item_img_re = re.compile('<div class="compoment--scope--video-type--picture.*?<source data-srcset="(.*?)[\s"]', re.S)
-        item_title_re = re.compile('<div class="compoment--scope--video-type--details--title">(.*?)</div>', re.S)
-        item_description_re = re.compile('<div class="compoment--scope--video-type--details--description">(.*?)</div>', re.S)
+        item_link_re = re.compile('<a href="(.*?)"', re.S)
+        item_img_re = re.compile('<div class="component--scope--episode-latest--picture.*?<img class="lazyload" data-srcset="(.*?)\?',re.S)
+        item_title_re = re.compile('<div class="component--scope--episode-latest--details--title">(.*?)</div>', re.S)
+        item_description_re = re.compile('<div class="component--scope--episode-latest--details--episode">(.*?)</div>',re.S)
 
         for html_item in html_items:
             item_content = html_item
