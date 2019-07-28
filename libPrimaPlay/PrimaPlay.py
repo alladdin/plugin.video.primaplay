@@ -215,7 +215,7 @@ class Parser:
     def get_show_navigation(self, link):
         list = []
         valid_items = ['Epizody', 'Bonusy', 'Sestřihy']
-        content = self.ua.get(link)
+        content = self.ua.get('https:'+link)
 
         wrapper_re = re.compile('<nav.*?id="program-navigation-menu"(.*?)</nav>', re.S)
         item_re = re.compile('<a href="//(.*?)".*?>(.*?)</a>', re.S)
